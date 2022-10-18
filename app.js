@@ -65,20 +65,14 @@ const createUser = async (req, res) => {
 app.post('/signup', createUser) // 첫번째 인자에는 endpoint url 을 기입하고,
 // app.post('/login', (req, res) => {res.json('login success')}) // 각각의 요청에 대해 핸들링 하는 함수를 두번째 인자로 넣습니다.
 
-const posts = [
-  {
-    id: 1,
-    title: "간단한 HTTP API 개발 시작!",
-    content: "Node.js에 내장되어 있는 http 모듈을 사용해서 HTTP server를 구현.",
-    userId: 1,
-  },
-  {
-    id: 2,
-    title: "HTTP의 특셩",
-    content: "Request/Response와 Stateless!!",
-    userId: 1,
-  },
-];
+
+
+app.get('/list', async (req, res) => {
+  const listData = await myDataSource.query(`SELECT users.id, users.profile_image, posting_images.posting_id, posting_images.image_url, posts.contents FROM users INNER JOIN posts ON posts.user_id = users.id INNER JOIN posting_images ON posting_images.posting_id = posts.id;`);
+  console.log(listData)
+  res.status(200).json({ data: listData })
+});
+
 
 const createPost = async (req, res) => {
 
