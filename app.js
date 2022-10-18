@@ -80,23 +80,25 @@ const posts = [
   },
 ];
 
-const createPost = (req, res) => {
+const createPost = async (req, res) => {
 
-  const post = req.body.data // 프론트에서 받아온 정보를 가져옵니다.
-  console.log(post) //프론트에서 받아온 정보를 출력
+  const { user_id, contents } = req.body // 프론트에서 받아온 정보를 가져옵니다.
+  const { posting_id, image_url } = req.body
 
-  posts.push({
-    id: post.id,
-    title: post.title,
-    content: post.content,
-    userId: post.userId
-  })
+  const result = await myDataSource.query(`
+    INSERT INTO posts (user_id, contents)
+    VALUES (
+      '${user_id}', '${contents}'
+    )
+  `)
+  const result1 = await myDataSource.query(`
+  INSERT INTO posting_images (posting_id, image_url)
+  VALUES (
+    '${posting_id}', '${image_url}'
+  )
+`)
 
-  console.log('after: ', posts)
-
-  res.json({ message: "postCreated" })
-  // express 덕분에 JSON.stringify 함수를 사용할 필요없이
-  // response 객체의 json 메소드를 활용합니다.
+  res.status(201).json({ message: "postCreated" })
 }
 
 app.post('/posts', createPost)
