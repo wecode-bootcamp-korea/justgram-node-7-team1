@@ -9,6 +9,7 @@ dotenv.config()
 const { DataSource } = require('typeorm');
 
 const mysql = require("mysql2");
+const { profile } = require('console');
 
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
@@ -36,38 +37,26 @@ app.get('/ping', (req, res) => {
   res.json({ message: '/ pong' })
 })
 
+app.get('/users', async (req, res) => {
+  const userData = await myDataSource.query(`SELECT * FROM users;`);
+  console.log(userData)
+  res.status(200).json({ users: userData })
+});
 
 
-const users = [
-  {
-    id: 1,
-    name: "Rebekah Johnson",
-    email: "Glover12345@gmail.com",
-    password: "123qwe",
-  },
-  {
-    id: 2,
-    name: "Fabian Predovic",
-    email: "connell29@gmail.com",
-    password: "password",
-  },
-];
 
-const createUser = (req, res) => {
+const createUser = async (req, res) => {
 
-  const user = req.body.data // 프론트에서 받아온 정보를 가져옵니다.
-  console.log(user) //프론트에서 받아온 정보를 출력
+  const { email, password, name, profile_image } = req.body // 프론트에서 받아온 정보를 가져옵니다.
 
-  users.push({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    password: user.password
-  })
+  const result = await myDataSource.query(`
+    INSERT INTO users (name, email, password, profile_image)
+    VALUES (
+      '${name}', '${email}','${password}', '${profile_image}'
+    )
+  `)
 
-  console.log('after: ', users)
-
-  res.json({ message: "userCreated" })
+  res.status(201).json({ message: "userCreated" })
   // express 덕분에 JSON.stringify 함수를 사용할 필요없이
   // response 객체의 json 메소드를 활용합니다.
 
