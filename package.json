@@ -1,0 +1,19 @@
+{
+  "name": "justgram-node-7-team1",
+  "version": "1.0.0",
+  "description": "| 💡 순서에 맞게 Node.js 환경에서 스타벅스 프로젝트에 필요한 API를 생성하는 과제입니다. 구글 클래스룸으로 제출하는 과제와, github에 push 하는 과제가 섞여있으니 유의해주세요.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wecode-bootcamp-korea/justgram-node-7-team1.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wecode-bootcamp-korea/justgram-node-7-team1/issues"
+  },
+  "homepage": "https://github.com/wecode-bootcamp-korea/justgram-node-7-team1#readme"
+}
