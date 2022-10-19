@@ -18,45 +18,12 @@ myDataSource.initialize()
     console.log("Data Source has been initialized!")
  })
 
-const users = [
-  {
-    id: 1,
-    name: "Rebekah Johnson",
-    email: "Glover12345@gmail.com",
-    password: "123qwe",
-  },
-  {
-    id: 2,
-    name: "Fabian Predovic",
-    email: "Connell29@gmail.com",
-    password: "password",
-  },
-];
-
-const posts = [
-  {
-    id: 1,
-    title: "간단한 HTTP API 개발 시작!",
-    content: "Node.js에 내장되어 있는 http 모듈을 사용해서 HTTP server를 구현.",
-    userId: 1,
-  },
-  {
-    id: 2,
-    title: "HTTP의 특성",
-    content: "Request/Response와 Stateless!!",
-    userId: 1,
-  },
-];
-
 const app = express()
 
 app.use(express.json())
 app.get('/ping', (req, res) => {
   res.json({message: 'pong'})
 })
-//회원가입 
-
-// 1. app에 회원가입하는 URL등록 
 
 app.get('/users', async (req, res) => {
   // database - order to get users
@@ -70,21 +37,51 @@ app.get('/users', async (req, res) => {
 })
 
 app.post('/join', async(req, res) => {
+  try {
+	  const { email, password, name, profileImage, phoneNumber } = req.body
 
-	// 2. Name, email, password received from 요청(request)
+    // 0. required variables check
+    const REQUIRED_KEYS = [email, password, name, phoneNumber]
+    
+    REQUIRED_KEYS.map((key) => {
+      if (!key) {
+        throw new Error('KEY_ERROR')
+      }
+    })
 
-	const { email, password, name, profileImage } = req.body
+    // 1. email에 @와 . 이 누락되지 않았는지 판단. 한글 미포함인지 판단.
+    if (!email.includes('@') || !email.includes('.') ) { //OR
+      throw new Error('EMAIL_INVALID')
+    }
 
-	// 3. users 배열에 고객 추가 -> table에 data 추가
-  const result = await myDataSource.query(`
-    INSERT INTO users (name, email, password, profile_image)
-    VALUES (
-      '${name}', '${email}', '${password}', '${profileImage}'
-    )
-  `)
-	// 4. 응답(response) to client
-  res.status(201).json({ message: 'USER_CREATED' })
+    // 2. 비밀번호가 10자리를 넘는지 확인. 특수문자 포함하는지.
 
+    if (password.length < 10) {
+      throw new Error('PASSWORD_INVALID')
+    }
+    // 3. 비밀번호에 phoneNumber가 포함되지는 않았는지.
+    // phonNumber = 010-2392-1846
+    // phone Number split ('나눠서')
+    const [_, foreNumber, laterNumber] = phoneNumber.split('-')
+    if (password.includes(foreNumber) || password.includes(laterNumber)) {
+      throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
+    }
+
+    // 앞자리가 비밀번호에 포함되었는지, 뒷자리가 비밀번호에 포함되었는지.
+
+    // A. 이미 database 상에 존재하는 Email로는 가입할 수 없음.
+
+    const result = await myDataSource.query(`
+      INSERT INTO users (name, email, password, profile_image)
+      VALUES (
+        '${name}', '${email}', '${password}', '${profileImage}'
+      )
+    `)    
+    res.status(201).json({ message: 'USER_CREATED' })
+  } catch(err) {
+    console.log(err)
+    res.status(400).json({message: err.message})
+  }
 })
 
 // 1. app posting URL 
