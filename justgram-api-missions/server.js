@@ -2,9 +2,9 @@ const http = require('http')
 const express = require('express')
 const dotenv = require("dotenv")
 dotenv.config()
-const { DataSource } = require('typeorm');
-
-const { EMAIL_VALIDATION, PASSWORD_VALIDATION, PHONE_NUMBER_VALIDATION } = require('./validationRule')
+const { DataSource, SimpleConsoleLogger } = require('typeorm');
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
@@ -44,34 +44,19 @@ app.post('/join', async(req, res) => {
 
     // 0. required variables check
     const REQUIRED_KEYS = { email , password, name, phoneNumber, isAgreed }
-    
-    // Object.keys(REQUIRED_KEYS).map((key) => {
-    //   if (!REQUIRED_KEYS[key]) {
-    //     throw new Error(`KEY_ERROR: ${key}`)
-    //   }
-    // })
 
-    if (EMAIL_VALIDATION.test(email) ) {
-      throw new Error('EMAIL_INVALID')
-    }
-
-    if (PASSWORD_VALIDATION.test(password)) {
-      throw new Error('PASSWORD_INVALID')
-    }
-
-    if (PHONE_NUMBER_VALIDATION.test(phoneNumber)) {
-      throw new Error('PHONE_NUMBER_INVALID')
-    }
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        throw new Error(`KEY_ERROR: ${key}`)
+      }
+    })
 
     const [_, foreNumber, laterNumber] = phoneNumber.split('-')
     if (password.includes(foreNumber) || password.includes(laterNumber)) {
       throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
     }
-
     // 앞자리가 비밀번호에 포함되었는지, 뒷자리가 비밀번호에 포함되었는지.
-
     // A. 이미 database 상에 존재하는 Email로는 가입할 수 없음.
-
     // 1. SELECT로 기존 존재하는 유저를 db로부터 가져와서, 있으면 중복이므로 가입 불가, 없으면 가입 가능
 
     const user = await myDataSource.query(`
@@ -82,13 +67,17 @@ app.post('/join', async(req, res) => {
       throw new Error("USER_ALREADY_EXISTS")
     }
 
+    console.log('before hashing: ', password)
+    const hashedPw = bcrypt.hashSync(password, bcrypt.genSaltSync())
+    console.log('after hashing: ', hashedPw)
+     
     // 2. email UNIQUE -> db가 자동으로 중복 이메일 걸러줌.
-    const result = await myDataSource.query(`
+    await myDataSource.query(`
       INSERT INTO users (name, email, password, profile_image)
       VALUES (
-        '${name}', '${email}', '${password}', '${profileImage}'
+        '${name}', '${email}', '${hashedPw}', '${profileImage}'
       )
-    `)    
+    `)   
     res.status(201).json({ message: 'USER_CREATED' })
   } catch(err) {
     console.log(err)
@@ -99,24 +88,98 @@ app.post('/join', async(req, res) => {
   }
 })
 
-// 1. app posting URL 
-app.post('/postList', (req, res) => {
-// 2. Receive data from client : 'title', 'content', 'userId'
+app.post('/login', async(req, res) => {
 
-  const title = req.body.title
-  const content = req.body.content
-  const userId = req.body.userId
+  try {
+	  const { email, password } = req.body
 
-// 3. Push data into array posts
+    // 1. KEY_ERROR check
+    const REQUIRED_KEYS = { email , password }
 
-  const postingData = {
-    'title': title,
-    'content': content,
-    'userId': userId
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    // 2. email, password validation <- front (double check)
+    // 3. user existence check
+    // db user SELECT <- WHERE : email
+    const [existingUser] = await myDataSource.query(`
+      SELECT id, email, password FROM users WHERE email = '${email}'
+    `)
+
+    if (!existingUser) {
+      const error = new Error('USER_DOES_NOT_EXIST')
+      error.statusCode = 404
+      throw error
+    }
+
+    // 4. password isSame using compare method in bcrypt
+    const isSame = bcrypt.compareSync(password, existingUser.password)
+
+    console.log('isSamePassword: ', isSame)
+    
+    if (!isSame) {
+      const error = new Error('INVALID_PASSWORD')
+      error.statusCode = 400
+      throw error
+    }
+    
+    const token = jwt.sign({ id: existingUser.id }, process.env.SECRET_KEY)
+
+    res.status(200).json({message: 'SUCCESS', token: token})
+
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({message: err.message})
   }
+})
 
-  posts.push(postingData)
-// 4. Send response to client
+// 1. app posting URL 
+app.post('/posting', async (req, res) => {
+// 2. Receive data from client : 'title', 'content'
+  
+  try {
+    const { token } = req.headers
+    const { title, content } = req.body
+
+    const REQUIRED_KEYS = { title, content }
+
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    // 3. get token from header
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRED')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+
+    // 4. if token ==> jwt.verify
+
+    const user = jwt.verify(token, process.env.SECRET_KEY)
+    const userId = user.id
+
+  // 5. userId, title, content 게시글 작성
+
+    await myDataSource.query(`
+      INSERT INTO posts (title, content, user_id) 
+      VALUES ('${title}', '${content}', ${userId})
+    `)
+
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({message: err.message})
+  }
 
   res.json({message: 'postCreated'})
 })
