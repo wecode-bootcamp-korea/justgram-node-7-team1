@@ -4,6 +4,8 @@ const dotenv = require("dotenv")
 dotenv.config()
 const { DataSource } = require('typeorm');
 
+const { EMAIL_VALIDATION, PASSWORD_VALIDATION, PHONE_NUMBER_VALIDATION } = require('./validationRule')
+
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
   host: process.env.TYPEORM_HOST,
@@ -38,30 +40,29 @@ app.get('/users', async (req, res) => {
 
 app.post('/join', async(req, res) => {
   try {
-	  const { email, password, name, profileImage, phoneNumber } = req.body
+	  const { email, password, name, profileImage, phoneNumber, isAgreed } = req.body
 
     // 0. required variables check
-    const REQUIRED_KEYS = [email, password, name, phoneNumber]
+    const REQUIRED_KEYS = { email , password, name, phoneNumber, isAgreed }
     
-    REQUIRED_KEYS.map((key) => {
-      if (!key) {
-        throw new Error('KEY_ERROR')
-      }
-    })
+    // Object.keys(REQUIRED_KEYS).map((key) => {
+    //   if (!REQUIRED_KEYS[key]) {
+    //     throw new Error(`KEY_ERROR: ${key}`)
+    //   }
+    // })
 
-    // 1. email에 @와 . 이 누락되지 않았는지 판단. 한글 미포함인지 판단.
-    if (!email.includes('@') || !email.includes('.') ) { //OR
+    if (EMAIL_VALIDATION.test(email) ) {
       throw new Error('EMAIL_INVALID')
     }
 
-    // 2. 비밀번호가 10자리를 넘는지 확인. 특수문자 포함하는지.
-
-    if (password.length < 10) {
+    if (PASSWORD_VALIDATION.test(password)) {
       throw new Error('PASSWORD_INVALID')
     }
-    // 3. 비밀번호에 phoneNumber가 포함되지는 않았는지.
-    // phonNumber = 010-2392-1846
-    // phone Number split ('나눠서')
+
+    if (PHONE_NUMBER_VALIDATION.test(phoneNumber)) {
+      throw new Error('PHONE_NUMBER_INVALID')
+    }
+
     const [_, foreNumber, laterNumber] = phoneNumber.split('-')
     if (password.includes(foreNumber) || password.includes(laterNumber)) {
       throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
@@ -71,6 +72,17 @@ app.post('/join', async(req, res) => {
 
     // A. 이미 database 상에 존재하는 Email로는 가입할 수 없음.
 
+    // 1. SELECT로 기존 존재하는 유저를 db로부터 가져와서, 있으면 중복이므로 가입 불가, 없으면 가입 가능
+
+    const user = await myDataSource.query(`
+      SELECT id, email FROM users WHERE email = '${email}'
+    `)
+
+    if (user.length !==0) {
+      throw new Error("USER_ALREADY_EXISTS")
+    }
+
+    // 2. email UNIQUE -> db가 자동으로 중복 이메일 걸러줌.
     const result = await myDataSource.query(`
       INSERT INTO users (name, email, password, profile_image)
       VALUES (
@@ -80,6 +92,9 @@ app.post('/join', async(req, res) => {
     res.status(201).json({ message: 'USER_CREATED' })
   } catch(err) {
     console.log(err)
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({message: "USER_ALREADY_EXISTS"})
+    }
     res.status(400).json({message: err.message})
   }
 })
