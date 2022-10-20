@@ -1,15 +1,14 @@
 const http = require('http')
 const express = require('express')
 const cors = require('cors')
-
 const morgan = require('morgan');
-
 const dotenv = require("dotenv");
 dotenv.config()
 const { DataSource } = require('typeorm');
+const methodOverride = require('method-override');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const mysql = require("mysql2");
-const { profile } = require('console');
 
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
@@ -25,126 +24,310 @@ myDataSource.initialize()
     console.log("Data Source has been initialized!")
   });
 
-
-
 const app = express()
 app.use(express.json())
-
 app.use(cors());
 app.use(morgan('combined'));
+app.use(methodOverride());
 
+// 핑퐁 던지기
 app.get('/ping', (req, res) => {
   res.json({ message: '/ pong' })
 })
 
-app.get('/users', async (req, res) => {
-  const userData = await myDataSource.query(`SELECT * FROM users;`);
-  console.log(userData)
-  res.status(200).json({ users: userData })
-});
+// 전체 유저 보여주기
+try {
+  app.get('/users', async (req, res) => {
+    const userData = await myDataSource.query(`SELECT * FROM users;`);
+    console.log(userData)
+    res.status(200).json({ users: userData })
+  });
+} catch (err) {
+  console.log(err)
+}
 
 
-
+// 유저 생성
 const createUser = async (req, res) => {
+  try {
+    const { email, password, password1, name, profile_image } = req.body
 
-  const { email, password, name, profile_image } = req.body // 프론트에서 받아온 정보를 가져옵니다.
+    const REQUIRE_KEYS = [email, password, password1, name]
 
-  const result = await myDataSource.query(`
-    INSERT INTO users (name, email, password, profile_image)
-    VALUES (
-      '${name}', '${email}','${password}', '${profile_image}'
-    )
-  `)
-
-  res.status(201).json({ message: "userCreated" })
-  // express 덕분에 JSON.stringify 함수를 사용할 필요없이
-  // response 객체의 json 메소드를 활용합니다.
-
-}
-
-app.post('/signup', createUser) // 첫번째 인자에는 endpoint url 을 기입하고,
-// app.post('/login', (req, res) => {res.json('login success')}) // 각각의 요청에 대해 핸들링 하는 함수를 두번째 인자로 넣습니다.
-
-
-
-app.get('/list', async (req, res) => {
-  const listData = await myDataSource.query(`SELECT users.id, users.profile_image, posting_images.posting_id, posting_images.image_url, posts.contents FROM users INNER JOIN posts ON posts.user_id = users.id INNER JOIN posting_images ON posting_images.posting_id = posts.id;`);
-  console.log(listData)
-  res.status(200).json({ data: listData })
-});
-
-
-const createPost = async (req, res) => {
-
-  const { user_id, contents } = req.body // 프론트에서 받아온 정보를 가져옵니다.
-  const { posting_id, image_url } = req.body
-
-  const result = await myDataSource.query(`
-    INSERT INTO posts (user_id, contents)
-    VALUES (
-      '${user_id}', '${contents}'
-    )
-  `)
-  const result1 = await myDataSource.query(`
-  INSERT INTO posting_images (posting_id, image_url)
-  VALUES (
-    '${posting_id}', '${image_url}'
-  )
-`)
-
-  res.status(201).json({ message: "postCreated" })
-}
-
-app.post('/posts', createPost)
-
-const data1 = (req, res) => {
-  res.json({
-    "data": [
-      {
-        "userID": 1,
-        "userName": "Rebekah Johnson",
-        "postingId": 1,
-        "postingTitle": "간단한 HTTP API 개발 시작!",
-        "postingContent": "Node.js에 내장되어 있는 http 모듈을 사용해서 HTTP server를 구현."
-      },
-      {
-        "userID": 2,
-        "userName": "Fabian Predovic",
-        "postingId": 2,
-        "postingTitle": "HTTP의 특성",
-        "postingContent": "Request/Response와 Stateless!!"
-      },
-      {
-        "userID": 3,
-        "userName": "new user 1",
-        "postingId": 3,
-        "postingTitle": "내용 1",
-        "postingContent": "sampleContent3"
-      },
-      {
-        "userID": 4,
-        "userName": "new user 2",
-        "postingId": 4,
-        "postingTitle": "내용 2",
-        "postingContent": "sampleContent4"
+    REQUIRE_KEYS.map((key) => {
+      if (!key) {
+        throw new Error('KEY_ERROR')
       }
-    ]
-  })
+    })
+
+    if (!email.includes('@') || !email.includes('.')) { //OR
+      throw new Error('EMAIL_INVALID')
+    }
+
+    if (password.length < 10) {
+      throw new Error('PASSWORD_INVALID')
+    }
+
+    if (password !== password1) {
+      throw new Error('PASSWORD_DONT_SAME')
+    }
+    const user = await myDataSource.query(`
+    SELECT id, email FROM users WHERE email= '${email}'
+    `)
+
+    if (user.length !== 0) {
+      throw new Error("USER_ALREADY_EXISTS")
+    }
+
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(password, salt, (err, hash) => {
+        myDataSource.query(`
+      INSERT INTO users (email, password, name, profile_image)
+      VALUES (
+        '${email}', '${hash}', '${name}', '${profile_image}'
+      )
+    `)
+      })
+    })
+
+    res.status(201).json({ message: "userCreated" })
+  } catch (err) {
+    console.log(err)
+    res.status(400).json({ message: err.message })
+  }
 }
+app.post('/signup', createUser)
 
-app.get('/listView', data1);
+// 로그인하기
 
-app.patch('/listView', (res, req) => {
-  const id = 1
+// POST /login 요청 body에 id와 password를 함께 실어서 요청으로 가정 (사실 id와 password는 암호화 되어있음)
 
-  for (let i = 0; i < posts.length; i++) {
-    const posting = posts[i]
-    if (posting.id === 1) {
-      posting.content = 'node'
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    const REQUIRED_KEYS = { email, password }
+
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    const [dbUser] = await myDataSource.query(`
+    SELECT id, email, name, password, profile_image
+      FROM users WHERE email = '${email}'
+      `)
+
+    if (!dbUser) {
+      const error = new Error('USER_DOES_NOT_EXIST')
+      error.statusCode = 404
+      throw error
+    }
+
+    const pwSame = bcrypt.compareSync(password, dbUser.password)
+    console.log('isSamePassword: ', pwSame)
+
+    if (!pwSame) {
+      const error = new Error('INVALID_PASSWORD')
+      error.statusCode = 400
+      throw error
+    }
+
+    //받은 요청의 id와 password로 DB에서 프로필사진, 닉네임 등 로그인 정보를 가져온다.
+    const name = dbUser.name;
+    const profile = dbUser.profile_image;
+    const id = dbUser.id;
+    token = jwt.sign({
+      type: 'JWT',
+      name: name,
+      profile: profile,
+      id: id
+    }, process.env.SECRET_KEY, {
+      expiresIn: '15m', // 만료시간 15분
+      issuer: '토큰발급자',
+    });
+
+    //response
+    return res.status(200).json({
+      code: 200,
+      message: '토큰이 발급되었습니다.',
+      token: token
+    });
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({ message: err.message })
+  }
+}
+app.post('/login', loginUser)
+
+const auth = (req, res, next) => {
+  // 인증 완료
+  try {
+    // 요청 헤더에 저장된 토큰(req.headers.authorization)과 비밀키를 사용하여 토큰을 req.decoded에 반환
+    req.decoded = jwt.verify(req.headers.authorization, SECRET_KEY);
+    return next();
+  }
+  // 인증 실패
+  catch (error) {
+    // 유효시간이 초과된 경우
+    if (error.name === 'TokenExpiredError') {
+      return res.status(419).json({
+        code: 419,
+        message: '토큰이 만료되었습니다.'
+      });
+    }
+    // 토큰의 비밀키가 일치하지 않는 경우
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        code: 401,
+        message: '유효하지 않은 토큰입니다.'
+      });
     }
   }
-  res.status(200).json({ data: posts })
+}
+
+app.get('/payload', auth, (req, res) => {
+  const name = req.decoded.name;
+  const profile = req.decoded.profile;
+  return res.status(200).json({
+    code: 200,
+    message: '토큰은 정상입니다.',
+    data: {
+      name: name,
+      profile: profile
+    }
+  });
 })
+
+
+// 게시물 보여주기
+app.get('/list', async (req, res) => {
+  try {
+    const { token } = req.headers
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRED')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+    const listData = await myDataSource.query(`
+    SELECT users.id, users.profile_image, posting_images.posting_id, posting_images.image_url, posts.contents 
+    FROM users 
+    INNER JOIN posts ON posts.user_id = users.id 
+    INNER JOIN posting_images ON posting_images.posting_id = posts.id;
+  `);
+    console.log(listData)
+    res.status(200).json({ data: listData })
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// 게시물 생성
+const createPost = async (req, res) => {
+  try {
+    const { token } = req.headers
+    const { title, contents } = req.body
+
+    const REQUIRED_KEYS = { title, contents }
+
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRED')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+
+    const user = jwt.verify(token, process.env.SECRET_KEY)
+    const userId = user.id
+
+    await myDataSource.query(`
+      INSERT INTO posts (user_id, title, contents) 
+      VALUES ('${userId}', '${title}', '${contents}')
+    `)
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({ message: err.message })
+  }
+  res.status(201).json({ message: "postCreated" })
+}
+app.post('/posts', createPost)
+
+// 게시글 업데이트
+const updateList = async (req, res) => {
+  try {
+    const { id, contents } = req.body
+
+    const REQUIRED_KEYS = { id, contents }
+
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRED')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+
+    await myDataSource.query(
+      `UPDATE posts SET 
+      contents = '${contents}' 
+      WHERE id= '${id}';`
+    );
+  } catch (err) {
+    console.log(err);
+    res.status(err.statusCode).json({ message: err.message })
+  }
+  res.status(201).json({ message: "successfully updated" });
+};
+app.post('/update', updateList);
+
+// 게시글 삭제
+const postDELETE = async (req, res) => {
+  try {
+    const { id, title, contents } = req.body;
+    const REQUIRED_KEYS = { id, title, contents }
+
+    Object.keys(REQUIRED_KEYS).map((key) => {
+      if (!REQUIRED_KEYS[key]) {
+        const error = new Error(`KEY_ERROR: ${key}`)
+        error.statusCode = 400
+        throw error
+      }
+    })
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRED')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+
+    await myDataSource.query(
+      `DELETE FROM posts WHERE id = '${id}';
+		`);
+
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({ message: err.message })
+  }
+  res.status(204).json({ message: "posting deleted" });
+};
+app.post('/delete', postDELETE);
 
 const server = http.createServer(app);
 
