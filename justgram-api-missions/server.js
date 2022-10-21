@@ -20,9 +20,50 @@ myDataSource.initialize()
     console.log("Data Source has been initialized!")
  })
 
+const validateToken = async(req, res, next) => {
+  // 3. get token from header
+  try {
+    const { token } = req.headers
+
+    if (!token) {
+      const error = new Error('LOGIN_REQUIRE')
+      error.statusCode = 401 // unauthorized
+      throw error
+    }
+
+    // 4. if token ==> jwt.verify
+
+    const user = jwt.verify(token, process.env.SECRET_KEY)
+
+    // 5. 해당 userId를 가진 유저가 실제로 존재하는지 .
+
+    console.log('user id: ', user.id)
+
+    const [userData] = await myDataSource.query(`
+      SELECT id, email FROM users WHERE id = ${user.id}
+    `)
+
+    console.log('user data: ', userData)
+
+    if (userData === undefined) {
+      const error = new Error('USER_INVALID')
+      error.statusCode = 404
+      throw error
+    }
+
+    req.userInfo = userData
+
+    next();
+  } catch (err) {
+    console.log(err)
+    res.status(err.statusCode).json({message: err.message})
+  }
+}
+
 const app = express()
 
 app.use(express.json())
+
 app.get('/ping', (req, res) => {
   res.json({message: 'pong'})
 })
@@ -139,11 +180,11 @@ app.post('/login', async(req, res) => {
 })
 
 // 1. app posting URL 
-app.post('/posting', async (req, res) => {
+app.post('/posting', validateToken, async (req, res) => {
 // 2. Receive data from client : 'title', 'content'
-  
   try {
-    const { token } = req.headers
+
+    const userId = req.userInfo.id
     const { title, content } = req.body
 
     const REQUIRED_KEYS = { title, content }
@@ -155,19 +196,6 @@ app.post('/posting', async (req, res) => {
         throw error
       }
     })
-
-    // 3. get token from header
-
-    if (!token) {
-      const error = new Error('LOGIN_REQUIRED')
-      error.statusCode = 401 // unauthorized
-      throw error
-    }
-
-    // 4. if token ==> jwt.verify
-
-    const user = jwt.verify(token, process.env.SECRET_KEY)
-    const userId = user.id
 
   // 5. userId, title, content 게시글 작성
 
@@ -185,7 +213,7 @@ app.post('/posting', async (req, res) => {
 })
 
 // 1. app posting list get URL
-app.get('/postList', (req, res) => {
+app.get('/postList', validateToken, async (req, res) => {
   // Option 1
   // data 형태를 직접 만들어서, res.json()으로 보내주기
 
@@ -239,7 +267,7 @@ app.get('/postList', (req, res) => {
 // pseudo-code - 가짜코드
 
 // 1. app 수정 url 등록
-app.patch('/postList', (req, res) => {
+app.patch('/postList', validateToken, async (req, res) => {
   // 2. 1번이라는 숫자를 변수에 할당.
   const id = 1
   // 3. posts라는 배열에서, id가 1번인 객체를 찾음.
