@@ -10,6 +10,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 
+
+
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
   host: process.env.TYPEORM_HOST,
@@ -151,7 +153,7 @@ const loginUser = async (req, res) => {
     });
 
     //response
-    return res.status(200).json({
+    res.status(200).json({
       code: 200,
       message: '토큰이 발급되었습니다.',
       token: token
@@ -163,25 +165,26 @@ const loginUser = async (req, res) => {
 }
 app.post('/login', loginUser)
 
+
 const auth = (req, res, next) => {
   // 인증 완료
   try {
     // 요청 헤더에 저장된 토큰(req.headers.authorization)과 비밀키를 사용하여 토큰을 req.decoded에 반환
-    req.decoded = jwt.verify(req.headers.authorization, SECRET_KEY);
-    return next();
+    req.decoded = jwt.verify(req.headers.authorization, process.env.SECRET_KEY);
+    next();
   }
   // 인증 실패
   catch (error) {
     // 유효시간이 초과된 경우
     if (error.name === 'TokenExpiredError') {
-      return res.status(419).json({
+      res.status(419).json({
         code: 419,
         message: '토큰이 만료되었습니다.'
       });
     }
     // 토큰의 비밀키가 일치하지 않는 경우
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
+      res.status(401).json({
         code: 401,
         message: '유효하지 않은 토큰입니다.'
       });
@@ -189,10 +192,10 @@ const auth = (req, res, next) => {
   }
 }
 
-app.get('/payload', auth, (req, res) => {
+const tokenCheck = (req, res) => {
   const name = req.decoded.name;
   const profile = req.decoded.profile;
-  return res.status(200).json({
+    res.status(200).json({
     code: 200,
     message: '토큰은 정상입니다.',
     data: {
@@ -200,17 +203,17 @@ app.get('/payload', auth, (req, res) => {
       profile: profile
     }
   });
-})
-
+}
+app.get('/payload', auth, tokenCheck)
 
 // 게시물 보여주기
-app.get('/list', async (req, res) => {
+const showList = async (req, res) => {
   try {
     const { token } = req.headers
 
     if (!token) {
       const error = new Error('LOGIN_REQUIRED')
-      error.statusCode = 401 // unauthorized
+      error.statusCode = 401
       throw error
     }
     const listData = await myDataSource.query(`
@@ -224,7 +227,8 @@ app.get('/list', async (req, res) => {
   } catch (err) {
     console.log(err);
   }
-});
+};
+app.get('/list', showList);
 
 // 게시물 생성
 const createPost = async (req, res) => {
@@ -242,12 +246,6 @@ const createPost = async (req, res) => {
       }
     })
 
-    if (!token) {
-      const error = new Error('LOGIN_REQUIRED')
-      error.statusCode = 401 // unauthorized
-      throw error
-    }
-
     const user = jwt.verify(token, process.env.SECRET_KEY)
     const userId = user.id
 
@@ -261,7 +259,7 @@ const createPost = async (req, res) => {
   }
   res.status(201).json({ message: "postCreated" })
 }
-app.post('/posts', createPost)
+app.post('/posts', auth, createPost)
 
 // 게시글 업데이트
 const updateList = async (req, res) => {
@@ -278,12 +276,6 @@ const updateList = async (req, res) => {
       }
     })
 
-    if (!token) {
-      const error = new Error('LOGIN_REQUIRED')
-      error.statusCode = 401 // unauthorized
-      throw error
-    }
-
     await myDataSource.query(
       `UPDATE posts SET 
       contents = '${contents}' 
@@ -295,7 +287,7 @@ const updateList = async (req, res) => {
   }
   res.status(201).json({ message: "successfully updated" });
 };
-app.post('/update', updateList);
+app.post('/update', auth, updateList);
 
 // 게시글 삭제
 const postDELETE = async (req, res) => {
@@ -311,12 +303,6 @@ const postDELETE = async (req, res) => {
       }
     })
 
-    if (!token) {
-      const error = new Error('LOGIN_REQUIRED')
-      error.statusCode = 401 // unauthorized
-      throw error
-    }
-
     await myDataSource.query(
       `DELETE FROM posts WHERE id = '${id}';
 		`);
@@ -327,7 +313,7 @@ const postDELETE = async (req, res) => {
   }
   res.status(204).json({ message: "posting deleted" });
 };
-app.post('/delete', postDELETE);
+app.post('/delete', auth, postDELETE);
 
 const server = http.createServer(app);
 
