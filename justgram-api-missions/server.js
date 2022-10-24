@@ -2,9 +2,11 @@ const http = require('http')
 const express = require('express')
 const dotenv = require("dotenv")
 dotenv.config()
-const { DataSource, SimpleConsoleLogger } = require('typeorm');
+const { DataSource } = require('typeorm');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+
+const userController = require('./controllers/userController')
 
 const myDataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
@@ -37,15 +39,11 @@ const validateToken = async(req, res, next) => {
 
     // 5. 해당 userId를 가진 유저가 실제로 존재하는지 .
 
-    console.log('user id: ', user.id)
-
     const [userData] = await myDataSource.query(`
       SELECT id, email FROM users WHERE id = ${user.id}
     `)
 
-    console.log('user data: ', userData)
-
-    if (userData === undefined) {
+    if (!userData) {
       const error = new Error('USER_INVALID')
       error.statusCode = 404
       throw error
@@ -56,7 +54,11 @@ const validateToken = async(req, res, next) => {
     next();
   } catch (err) {
     console.log(err)
-    res.status(err.statusCode).json({message: err.message})
+    if (err.message === 'invalid signature') {
+      err.statusCode = 400
+      err.message = 'INVALID_SIGNATURE'
+    } 
+    res.status(err.statusCode || 500).json({message: err.message})
   }
 }
 
@@ -79,55 +81,7 @@ app.get('/users', async (req, res) => {
 
 })
 
-app.post('/join', async(req, res) => {
-  try {
-	  const { email, password, name, profileImage, phoneNumber, isAgreed } = req.body
-
-    // 0. required variables check
-    const REQUIRED_KEYS = { email , password, name, phoneNumber, isAgreed }
-
-    Object.keys(REQUIRED_KEYS).map((key) => {
-      if (!REQUIRED_KEYS[key]) {
-        throw new Error(`KEY_ERROR: ${key}`)
-      }
-    })
-
-    const [_, foreNumber, laterNumber] = phoneNumber.split('-')
-    if (password.includes(foreNumber) || password.includes(laterNumber)) {
-      throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
-    }
-    // 앞자리가 비밀번호에 포함되었는지, 뒷자리가 비밀번호에 포함되었는지.
-    // A. 이미 database 상에 존재하는 Email로는 가입할 수 없음.
-    // 1. SELECT로 기존 존재하는 유저를 db로부터 가져와서, 있으면 중복이므로 가입 불가, 없으면 가입 가능
-
-    const user = await myDataSource.query(`
-      SELECT id, email FROM users WHERE email = '${email}'
-    `)
-
-    if (user.length !==0) {
-      throw new Error("USER_ALREADY_EXISTS")
-    }
-
-    console.log('before hashing: ', password)
-    const hashedPw = bcrypt.hashSync(password, bcrypt.genSaltSync())
-    console.log('after hashing: ', hashedPw)
-     
-    // 2. email UNIQUE -> db가 자동으로 중복 이메일 걸러줌.
-    await myDataSource.query(`
-      INSERT INTO users (name, email, password, profile_image)
-      VALUES (
-        '${name}', '${email}', '${hashedPw}', '${profileImage}'
-      )
-    `)   
-    res.status(201).json({ message: 'USER_CREATED' })
-  } catch(err) {
-    console.log(err)
-    if (err.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({message: "USER_ALREADY_EXISTS"})
-    }
-    res.status(400).json({message: err.message})
-  }
-})
+app.post('/join', userController.signUp)
 
 app.post('/login', async(req, res) => {
 
