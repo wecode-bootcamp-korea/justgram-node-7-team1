@@ -1,5 +1,17 @@
 const userService = require('../services/userService')
 
+const showAllUser = async (req, res) => {
+  try {
+      const result = await userService.showAllUser()
+      res.status(200).json({ users: result })
+  }
+  catch (err) {
+    console.log(err)
+  }
+  
+}
+
+
 const createUser = async (req, res) => {
   try {
 
@@ -25,7 +37,23 @@ const createUser = async (req, res) => {
   }
 }
 
+const tokenCheck = (req, res) => {
+  const name = req.decoded.name;
+  const profile = req.decoded.profile;
+  const id = req.decoded.id
+    res.status(200).json({
+    code: 200,
+    message: '토큰은 정상입니다.',
+    data: {
+      name: name,
+      profile: profile,
+      id: id
+    }
+  });
+}
 
 module.exports = {
-  createUser
+  showAllUser,
+  createUser,
+  tokenCheck
 }

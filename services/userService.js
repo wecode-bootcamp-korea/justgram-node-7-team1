@@ -1,10 +1,13 @@
 const userDao = require('../models/userDao')
 
+const showAllUser = async () => {
+  return userDao.showAllUser()
+}
 
 const createUser = async (email, password, password1, name, profile_image) => {
 
   console.log('I am Service 1')
-  if (!email.includes('@') || !email.includes('.')) { //OR
+  if (!email.includes('@') || !email.includes('.')) { 
     throw new Error('EMAIL_INVALID')
   }
 
@@ -29,5 +32,6 @@ const createUser = async (email, password, password1, name, profile_image) => {
 }
 
 module.exports = {
+  showAllUser,
   createUser
 }

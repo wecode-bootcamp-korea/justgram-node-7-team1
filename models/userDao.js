@@ -15,6 +15,10 @@ myDataSource.initialize()
     console.log("Data Source has been initialized!")
   });
 
+const showAllUser = async () => {
+  const userData = await myDataSource.query(`SELECT * FROM users;`);
+  return userData
+}
 
 
 const getUserByEmail = async (email) => {
@@ -42,6 +46,7 @@ const createUserInDb = async (email, name, password, profile_image) => {
 
 
 module.exports = {
+  showAllUser,
   getUserByEmail,
   createUserInDb
 }
