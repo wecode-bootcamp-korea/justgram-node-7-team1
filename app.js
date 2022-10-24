@@ -9,6 +9,7 @@ const methodOverride = require('method-override');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const userController = require('./controllers/userController')
 
 
 
@@ -50,55 +51,7 @@ try {
 
 
 // 유저 생성
-const createUser = async (req, res) => {
-  try {
-    const { email, password, password1, name, profile_image } = req.body
-
-    const REQUIRE_KEYS = [email, password, password1, name]
-
-    REQUIRE_KEYS.map((key) => {
-      if (!key) {
-        throw new Error('KEY_ERROR')
-      }
-    })
-
-    if (!email.includes('@') || !email.includes('.')) { //OR
-      throw new Error('EMAIL_INVALID')
-    }
-
-    if (password.length < 10) {
-      throw new Error('PASSWORD_INVALID')
-    }
-
-    if (password !== password1) {
-      throw new Error('PASSWORD_DONT_SAME')
-    }
-    const user = await myDataSource.query(`
-    SELECT id, email FROM users WHERE email= '${email}'
-    `)
-
-    if (user.length !== 0) {
-      throw new Error("USER_ALREADY_EXISTS")
-    }
-
-    bcrypt.genSalt(10, (err, salt) => {
-      bcrypt.hash(password, salt, (err, hash) => {
-        myDataSource.query(`
-      INSERT INTO users (email, password, name, profile_image)
-      VALUES (
-        '${email}', '${hash}', '${name}', '${profile_image}'
-      )
-    `)
-      })
-    })
-
-    res.status(201).json({ message: "userCreated" })
-  } catch (err) {
-    console.log(err)
-    res.status(400).json({ message: err.message })
-  }
-}
-app.post('/signup', createUser)
+app.post('/signup', userController.createUser)
 
 // 로그인하기
 
