@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const userController = require('./controllers/userController')
+const loginController = require('./controllers/loginController')
 
 
 
@@ -54,69 +55,7 @@ try {
 app.post('/signup', userController.createUser)
 
 // 로그인하기
-
-// POST /login 요청 body에 id와 password를 함께 실어서 요청으로 가정 (사실 id와 password는 암호화 되어있음)
-
-const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body
-
-    const REQUIRED_KEYS = { email, password }
-
-    Object.keys(REQUIRED_KEYS).map((key) => {
-      if (!REQUIRED_KEYS[key]) {
-        const error = new Error(`KEY_ERROR: ${key}`)
-        error.statusCode = 400
-        throw error
-      }
-    })
-
-    const [dbUser] = await myDataSource.query(`
-    SELECT id, email, name, password, profile_image
-      FROM users WHERE email = '${email}'
-      `)
-
-    if (!dbUser) {
-      const error = new Error('USER_DOES_NOT_EXIST')
-      error.statusCode = 404
-      throw error
-    }
-
-    const pwSame = bcrypt.compareSync(password, dbUser.password)
-    console.log('isSamePassword: ', pwSame)
-
-    if (!pwSame) {
-      const error = new Error('INVALID_PASSWORD')
-      error.statusCode = 400
-      throw error
-    }
-
-    //받은 요청의 id와 password로 DB에서 프로필사진, 닉네임 등 로그인 정보를 가져온다.
-    const name = dbUser.name;
-    const profile = dbUser.profile_image;
-    const id = dbUser.id;
-    token = jwt.sign({
-      type: 'JWT',
-      name: name,
-      profile: profile,
-      id: id
-    }, process.env.SECRET_KEY, {
-      expiresIn: '15m', // 만료시간 15분
-      issuer: '토큰발급자',
-    });
-
-    //response
-    res.status(200).json({
-      code: 200,
-      message: '토큰이 발급되었습니다.',
-      token: token
-    });
-  } catch (err) {
-    console.log(err)
-    res.status(err.statusCode).json({ message: err.message })
-  }
-}
-app.post('/login', loginUser)
+app.post('/login', loginController.loginUser)
 
 
 const auth = (req, res, next) => {
