@@ -26,6 +26,7 @@ myDataSource.initialize().then(() => {
 });
 
 const controller = require("./controller/usercontroller");
+//-----------------------------------------------------------------------------------------
 // 유저 들고오기(과제에 없는데 왜 적혀있는지 모름)
 app.get("/users", async (req, res) => {
   try {
@@ -41,149 +42,28 @@ app.get("/users", async (req, res) => {
 });
 //미션 3
 
+//-----------------------------------------------------------------------------------------
 //유저 추가
 app.post("/join", controller.signup);
 
+//-----------------------------------------------------------------------------------------
 //미션 5 유저 로그인
 app.post("/login", controller.login);
 
+//-----------------------------------------------------------------------------------------
 //미션4
 //포스팅 추가
-app.post("/posting", async (req, res) => {
-  try {
-    //----------------------------C------------------------------
-    const { contents } = req.body;
-    const { token } = req.headers;
-
-    // 1. 정보가 다 들어왔는지
-
-    const posting_required_keys = { contents };
-
-    Object.keys(posting_required_keys).map((key) => {
-      if (!posting_required_keys[key]) {
-        throw new Error(`KEY_ERROR: ${key}`);
-      }
-    });
-    // 2. 로그인 했는지
-    if (!token) {
-      throw new Error("ERROR: LOGIN_REQUESTED");
-    }
-    //----------------------------M------------------------------
-    // 3. 토큰으로 로그인 아이디 넣기
-    const user = jwt.verify(token, secret_key);
-    const user_ID = user.id;
-
-    //----------------------------S------------------------------
-    const result = await myDataSource.query(
-      `insert into postings(user_id, contents) values( '${user_ID}', '${contents}')`
-    );
-
-    res.status(200).json({ message: "post Created" });
-  } catch (error) {
-    console.log(error);
-    res.json({ message: error.message });
-  }
-});
+app.post("/posting", controller.posting);
+//-----------------------------------------------------------------------------------------
 //(전체)게시글 들고오기
-app.get("/post", async (req, res) => {
-  try {
-    //1. 로그인해야 게시글 볼 수 있음.
-    const { token } = req.headers;
-    if (!token) {
-      throw new Error("로그인!");
-    }
-    //
-    const getpost = await myDataSource.query(
-      `select postings.user_id, users.profile_image, posting_images.posting_id, posting_images.image_url, postings.contents from users inner join postings on users.id = postings.user_id inner join posting_images on postings.id = posting_images.posting_id`
-    );
-
-    console.log("data : ", getpost);
-
-    res.status(200).json({ users: getpost });
-  } catch (err) {
-    console.log(err);
-    res.json({ message: err.message });
-  }
-});
+app.get("/post", controller.getPost);
+//-----------------------------------------------------------------------------------------
 //게시글 수정하기
-app.patch("/update", async (req, res) => {
-  try {
-    const { id, content } = req.body;
-    const { token } = req.headers;
-    //1. 일단 로그인 여부 먼저
-    if (!token) {
-      throw new Error("로그인!!");
-    }
-    //2. 정보가 다 들어오는지(id는 포스팅게시글 번호)
-    const update_required_keys = { id, content };
-
-    Object.keys(update_required_keys).map((key) => {
-      if (!update_required_keys[key]) {
-        throw new Error(`KEY_ERROR: ${key}`);
-      }
-    });
-    // 3. 토큰으로 로그인 아이디 들고오기
-    const user = jwt.verify(token, secret_key);
-    const user_ID = user.id;
-    // 4. 데이터 넣기
-    const updatepost = await myDataSource.query(
-      `UPDATE postings SET contents='${content}' WHERE user_id=${user_ID} AND id=${id}; 
-    `
-    );
-    const afterUpdate = await myDataSource.query(`select * from postings`);
-    res.status(200).json({ data: afterUpdate });
-  } catch (err) {
-    console.log(err);
-    res.json({ message: err.message });
-  }
-});
+app.patch("/update", controller.update);
+//-----------------------------------------------------------------------------------------
 // 게시글 삭제
-app.delete("/deletePost", async (req, res) => {
-  try {
-    const { postingsId } = req.body;
-    const { token } = req.headers;
-    //1. 로그인 여부 확인
-    if (!token) {
-      throw new Error("로그인!!");
-    }
-    // 2. 데이터가 잘 들어오는지
-
-    const update_required_keys = { postingsId };
-
-    Object.keys(update_required_keys).map((key) => {
-      if (!update_required_keys[key]) {
-        throw new Error(`KEY_ERROR: ${key}`);
-      }
-    });
-    // 3. 자기 게시글만 지울 수 있게 하기
-    const user = jwt.verify(token, secret_key);
-    const user_ID = user.id;
-
-    const [IDmatchUsersT] = await myDataSource.query(
-      `select id from users where id = ${user_ID}`
-    );
-    const [IDmatchPostingsT] = await myDataSource.query(
-      `select user_id from postings where id = '${postingsId}'`
-    );
-    // 잠깐 게시물이 존재하는지 확인
-    if (!IDmatchPostingsT) {
-      throw new Error("삭제된 계시물입니다");
-    }
-    //
-    if (IDmatchPostingsT.user_id !== IDmatchUsersT.id) {
-      throw new Error("자기 게시글만 삭제하기");
-    }
-
-    const result = await myDataSource.query(
-      `delete from postings where id = '${postingsId}'`
-    );
-    res.status(200).json({ message: "post Deleted" });
-  } catch (err) {
-    console.log(err);
-    res.json({ message: err.message });
-  }
-});
-
+app.delete("/deletePost", controller.deletePost);
+//-----------------------------------------------------------------------------------------
 const server = http.createServer(app);
 
 try {

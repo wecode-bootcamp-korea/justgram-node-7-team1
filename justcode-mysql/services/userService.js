@@ -57,12 +57,56 @@ const login = async (email, password) => {
   if (!checkPwByEmail) {
     throw new Error("비밀번호가 틀렸습니다");
   }
-  const token = jwt.sign({ id: check_pw.id }, secret_key);
+  const token = jwt.sign({ id: check_pw[0].id }, secret_key);
 
   return token;
+};
+
+const posting = async (token, contents) => {
+  const user = jwt.verify(token, secret_key);
+  const user_ID = user.id;
+  const postingContents = await usermodel.getContentForPosting(
+    user_ID,
+    contents
+  );
+
+  return postingContents;
+};
+
+const getPost = async (token) => {
+  const result = await usermodel.getAllPost(token);
+  return result;
+};
+
+const update = async (token, id, contents) => {
+  const user = jwt.verify(token, secret_key);
+  const user_ID = user.id;
+  const postUpdate = await usermodel.update(id, contents, user_ID);
+  const after = await usermodel.afterUpdate(id);
+  return postUpdate, after;
+};
+
+const deletePost = async (token, postingsId) => {
+  const user = jwt.verify(token, secret_key);
+  const user_ID = user.id;
+
+  const userId = await usermodel.postingsUser_Id(postingsId);
+  console.log(userId[0]);
+  if (!userId[0]) {
+    throw new Error("삭제된 계시물입니다");
+  }
+  if (userId[0].user_id !== user_ID) {
+    throw new Error("자기 게시글만 삭제하기");
+  }
+  const result = await usermodel.deletePost(postingsId);
+  return result;
 };
 
 module.exports = {
   signup,
   login,
+  posting,
+  getPost,
+  update,
+  deletePost,
 };
