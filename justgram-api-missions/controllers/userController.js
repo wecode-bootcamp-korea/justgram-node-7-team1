@@ -43,6 +43,10 @@ const login = async (req, res) => {
 
 const getMe = async (req, res) => {
   const token = req.headers.token
+
+  if (!token) {
+    res.status(401).json({message: "TOKEN_REQUIRED"})
+  }
   const me = jwt.verify(token, process.env.SECRET_KEY)
   console.log(me)
 
