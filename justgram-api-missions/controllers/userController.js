@@ -42,6 +42,7 @@ const login = async (req, res) => {
 }
 
 const getMe = async (req, res) => {
+  try {
   const token = req.headers.token
 
   if (!token) {
@@ -53,6 +54,10 @@ const getMe = async (req, res) => {
   const [user] = await userDao.getMe(me.id)
 
   res.status(200).json(user)
+
+  } catch (err) {
+    console.log(err)
+  }
 }
 module.exports = {
 	signUp,
