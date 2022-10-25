@@ -1,21 +1,15 @@
-const http = require('http')
-const express = require('express')
 const dotenv = require("dotenv")
 dotenv.config()
 
-const router = require('./routers')
+const { createApp } = require("./app");
 
-const app = express()
+const startServer = async () => {
+  const app = createApp();
+  const PORT = process.env.PORT;
 
-app.use(express.json())
-app.use(router)
+  app.listen(PORT, () => {
+    console.log(`Listening on Port ${PORT}`);
+  });
+};
 
-const server = http.createServer(app)
-
-try {
-  server.listen(8000, () => {
-    console.log('server is listening on PORT 8000')
-  })
-} catch(err) {
-  console.log(err)
-}
+startServer();

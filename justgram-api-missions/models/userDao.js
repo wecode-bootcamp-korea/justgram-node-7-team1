@@ -17,7 +17,7 @@ myDataSource.initialize()
 const findUserByEmail = async (email) => {
 	console.log('I am dao 1')
     const user = await myDataSource.query(`
-      SELECT id, email FROM users WHERE email = '${email}'
+      SELECT id, email, password FROM users WHERE email = '${email}'
     `)
 	return user
 }
@@ -26,14 +26,20 @@ const createUser = async (name, email, hashedPw, profileImage) => {
 
 	console.log('I am dao 2')
     await myDataSource.query(`
-      INSERT INTO users (name, email, password, profile_image)
+      INSERT INTO users (name, email, password)
       VALUES (
-        '${name}', '${email}', '${hashedPw}', '${profileImage}'
+        '${name}', '${email}', '${hashedPw}' 
       )
     `)   
 }
 
+const getMe = async(info) => {
+  return await myDataSource.query(`
+    SELECT email FROM users WHERE id = ${info}
+  `)
+}
 module.exports = {
 	findUserByEmail,
-	createUser
+	createUser,
+  getMe
 }

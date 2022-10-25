@@ -8,10 +8,10 @@ const signUp = async (email, name, password, phoneNumber, profileImage) => {
 	// email validation
 	// password validation
   console.log('I am service 1')
-  const [_, foreNumber, laterNumber] = phoneNumber.split('-')
-  if (password.includes(foreNumber) || password.includes(laterNumber)) {
-    throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
-  }
+  // const [_, foreNumber, laterNumber] = phoneNumber.split('-')
+  // if (password.includes(foreNumber) || password.includes(laterNumber)) {
+  //   throw new Error('PASSWORD_INCLUDING_PHONE_NUMBER')
+  // }
   // 1
 	const user = await userDao.findUserByEmail(email)
   console.log('I am service 2')

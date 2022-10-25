@@ -1,4 +1,6 @@
+const jwt = require('jsonwebtoken')
 const userService = require('../services/userService')
+const userDao = require('../models/userDao')
 // controller는 service에만 의존
 
 const signUp = async (req, res) => {
@@ -8,7 +10,7 @@ const signUp = async (req, res) => {
 
 	  const { email, password, name, profileImage, phoneNumber, isAgreed } = req.body
 
-    const REQUIRED_KEYS = { email , password, name, phoneNumber, isAgreed }
+    const REQUIRED_KEYS = { email , password, name }
 
     Object.keys(REQUIRED_KEYS).map((key) => {
       if (!REQUIRED_KEYS[key]) {
@@ -30,6 +32,26 @@ const signUp = async (req, res) => {
 	}
 }
 
+const login = async (req, res) => {
+  const { email, password } = req.body
+
+  const [user] = await userDao.findUserByEmail(email)
+  const token = jwt.sign({id: user.id}, process.env.SECRET_KEY)
+
+  res.status(200).json({ message: "SUCCESS", token })
+}
+
+const getMe = async (req, res) => {
+  const token = req.headers.token
+  const me = jwt.verify(token, process.env.SECRET_KEY)
+  console.log(me)
+
+  const [user] = await userDao.getMe(me.id)
+
+  res.status(200).json(user)
+}
 module.exports = {
-	signUp
+	signUp,
+  login,
+  getMe
 }
