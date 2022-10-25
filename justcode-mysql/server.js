@@ -25,7 +25,7 @@ myDataSource.initialize().then(() => {
   console.log("Data Source has been initialized!");
 });
 
-const controller = require("./controller/controller");
+const controller = require("./controller/usercontroller");
 // 유저 들고오기(과제에 없는데 왜 적혀있는지 모름)
 app.get("/users", async (req, res) => {
   try {
@@ -45,62 +45,7 @@ app.get("/users", async (req, res) => {
 app.post("/join", controller.signup);
 
 //미션 5 유저 로그인
-app.post("/login", async (req, res) => {
-  try {
-    //----------------------------C------------------------------
-    const { login_id, login_password } = req.body;
-
-    //키 확인
-    const login_keys = { login_id, login_password };
-
-    Object.keys(login_keys).map((key) => {
-      if (!login_keys[key]) {
-        throw new Error(`KEY_ERROR: ${key}`);
-      }
-    });
-
-    //----------------------------M------------------------------
-    //로그인 id 형식 확인
-    const emailreg =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-    if (!login_id.match(emailreg)) {
-      throw new Error("이메일 형식으로 작성바랍니다.");
-    }
-    //password 형식 확인
-    const passwordVal = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^*+=-]).{5,20}$/;
-    if (!login_password.match(passwordVal)) {
-      throw new Error("비밀번호에 글자, 숫자, 특수문자를 포함해 주세요");
-    }
-
-    //----------------------------S------------------------------
-    //유저 id 확인
-    const checkid = await myDataSource.query(
-      `select email from users where email = '${login_id}'`
-    );
-    if (checkid.length === 0) {
-      throw new Error("존재하지 않는 아이디입니다.");
-    }
-    //비밀번호 확인
-
-    const get_data = await myDataSource.query(
-      `select id, password from users where email = '${login_id}'`
-    );
-
-    //----------------------------M------------------------------
-    const check_pw = bcrypt.compareSync(login_password, get_data[0].password);
-
-    if (!check_pw) {
-      throw new Error("비밀번호가 틀렸습니다");
-    }
-    //토큰 발행
-    const token = jwt.sign({ id: get_data[0].id }, secret_key);
-    //-----------------------------------------------------------------
-    res.status(200).json({ message: "로그인 성공", token: token });
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({ message: err.message });
-  }
-});
+app.post("/login", controller.login);
 
 //미션4
 //포스팅 추가

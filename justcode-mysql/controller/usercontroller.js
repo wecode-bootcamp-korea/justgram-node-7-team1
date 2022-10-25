@@ -11,22 +11,15 @@ const myDataSource = new DataSource({
   username: process.env.TYPEORM_USERNAME,
   password: process.env.TYPEORM_PASSWORD,
   database: process.env.TYPEORM_DATABASE,
+  // entities: ["dist/**/**.entity{.ts,.js}"],
 });
-
-const app = express();
-app.use(express.json());
-const bcrypt = require("bcryptjs");
-const salt = bcrypt.genSaltSync();
-const jwt = require("jsonwebtoken");
-const secret_key = process.env.SECRET_KEY;
-
-const userServices = require("../services/service");
+const userServices = require("../services/userService");
 //-------------프론트에서 들고 오는 거---------------------
 // 1. signup정보가 다 들어왔는지
 const signup = async (req, res) => {
   try {
-    const { email, nickname, password, profile_image } = req.body;
-    const required_keys = { email, nickname, password, profile_image };
+    const { email, password, nickname, profile_image } = req.body;
+    const required_keys = { email, password, nickname, profile_image };
 
     Object.keys(required_keys).map((key) => {
       if (!required_keys[key]) {
@@ -34,7 +27,12 @@ const signup = async (req, res) => {
       }
     });
 
-    const result = userServices.signup(email, password);
+    const result = await userServices.signup(
+      email,
+      password,
+      nickname,
+      profile_image
+    );
 
     res.status(200).json({ message: "user_created" });
   } catch (err) {
@@ -43,6 +41,28 @@ const signup = async (req, res) => {
   }
 };
 
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const login_keys = { email, password };
+
+    Object.keys(login_keys).map((key) => {
+      if (!login_keys[key]) {
+        throw new Error(`KEY_ERROR: ${key}`);
+      }
+    });
+
+    const result = await userServices.login(email, password);
+
+    res.status(200).json({ message: "SUCCESSED_LOGIN" });
+  } catch (err) {
+    console.log(err);
+    res.json({ message: err.message });
+  }
+};
+
 module.exports = {
   signup,
+  login,
 };
