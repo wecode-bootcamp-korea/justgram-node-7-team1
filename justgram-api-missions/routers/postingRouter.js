@@ -4,9 +4,6 @@ const postingController = require('../controllers/postingController')
 
 const router = express.Router();
 
-router.get('', validateToken, postingController.getPosting)
-router.post('', validateToken, postingController.createPosting)
+router.get('', postingController.getPosting)
 
-module.exports = {
-	postingRouter
-}
+module.exports = router
