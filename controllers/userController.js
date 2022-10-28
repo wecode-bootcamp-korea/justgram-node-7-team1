@@ -16,8 +16,11 @@ const createUser = async (req, res) => {
   try {
 
     console.log('I am Controller 1')
-    const { email, password, password1, name, profile_image } = req.body
+    const { email, password } = req.body
 
+    const password1 = `${password}`
+    const name = "myName"
+    const profile_image = "http://profileImage"
     const REQUIRE_KEYS = [email, password, password1, name]
 
     REQUIRE_KEYS.map((key) => {
@@ -35,6 +38,15 @@ const createUser = async (req, res) => {
     console.log(err)
     res.status(400).json({ message: err.message })
   }
+}
+
+const showMe = (req, res) => {
+  const id = req.decoded.id
+  const email = req.decoded.email;
+  res.status(200).json({
+    id: id,
+    email: email
+  })
 }
 
 const tokenCheck = (req, res) => {
@@ -55,5 +67,6 @@ const tokenCheck = (req, res) => {
 module.exports = {
   showAllUser,
   createUser,
-  tokenCheck
+  tokenCheck,
+  showMe
 }

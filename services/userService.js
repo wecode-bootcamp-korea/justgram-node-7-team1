@@ -12,7 +12,7 @@ const createUser = async (email, password, password1, name, profile_image) => {
   }
 
   if (password.length < 10) {
-    throw new Error('PASSWORD_INVALID')
+    throw new Error('PASSWORD_TOO_SHORT')
   }
 
   if (password !== password1) {
@@ -31,7 +31,12 @@ const createUser = async (email, password, password1, name, profile_image) => {
   return createdUser
 }
 
+const showME = async() => {
+  return userDao.showME()
+} 
+
 module.exports = {
   showAllUser,
-  createUser
+  createUser,
+  showME
 }

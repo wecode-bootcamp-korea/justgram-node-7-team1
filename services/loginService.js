@@ -20,11 +20,13 @@ const loginUser = async (email, password) => {
   const name = dbUser.name;
   const profile = dbUser.profile_image;
   const id = dbUser.id;
+  const userEmail = dbUser.email;
   token = jwt.sign({
     type: 'JWT',
     name: name,
     profile: profile,
-    id: id
+    id: id,
+    email:userEmail
   }, process.env.SECRET_KEY, {
     expiresIn: '15m', // 만료시간 15분
     issuer: '토큰발급자',

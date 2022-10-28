@@ -44,9 +44,15 @@ const createUserInDb = async (email, name, password, profile_image) => {
   })
 }
 
+const showME = async (id,email) => {
+  const userData = await myDataSource.query(`SELECT id, email FROM users WHERE = ${email};`);
+  return userData
+}
+
 
 module.exports = {
   showAllUser,
   getUserByEmail,
-  createUserInDb
+  createUserInDb,
+  showME
 }

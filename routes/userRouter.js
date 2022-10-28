@@ -13,4 +13,6 @@ router.post('/signup', userController.createUser);
 // 토큰 확인
 router.get('/payload', validateToken, userController.tokenCheck);
 
+router.get('/me', validateToken, userController.showMe )
+
 module.exports = router
