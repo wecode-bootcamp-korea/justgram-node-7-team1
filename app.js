@@ -1,6 +1,6 @@
 const express = require('express');
-const routes = require('./routes');
 const cors = require('cors');
+const routes = require('./routes');
 const morgan = require('morgan');
 const methodOverride = require('method-override');
 
@@ -8,8 +8,8 @@ const createApp = () => {
   const app = express();
 
   app.use(express.json());
-  app.use(routes);
   app.use(cors());
+  app.use(routes);
   app.use(morgan('combined'));
   app.use(methodOverride());
 
