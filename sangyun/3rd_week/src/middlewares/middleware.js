@@ -1,8 +1,7 @@
-import type express from 'express';
-import jwt from 'jsonwebtoken';
-import service from '../services'
+const  jwt = require('jsonwebtoken');
+const service = require('../services');
 
-async function authMiddleware(...[req, _, next] : Parameters<express.RequestHandler>) : Promise<any> {
+async function authMiddleware(req, _, next) {
 	const token = req.headers.authorization;
 	const decodedToken = decodeToken(token);
   const userInfo = await service.userSvc.findUserById(decodedToken.id);
@@ -10,7 +9,7 @@ async function authMiddleware(...[req, _, next] : Parameters<express.RequestHand
   next();
 }
 
-async function adminMiddleware(...[req, _, next] : Parameters<express.RequestHandler>) : Promise<any> {
+async function adminMiddleware(req, _, next){
   const userInfo = req.userInfo;
   if (userInfo.email != "sororiri@gmail.com") {
     throw {status: 403, message: "not permitted"};
@@ -18,7 +17,7 @@ async function adminMiddleware(...[req, _, next] : Parameters<express.RequestHan
   next();
 }
 
-function decodeToken(token: string) {
+function decodeToken(token) {
   try {
     return jwt.verify(token, 'server_made_secret_key');
   } catch (err) {
@@ -28,8 +27,8 @@ function decodeToken(token: string) {
 }
 
 // error handling 미들웨어
-const errorHandler: express.ErrorRequestHandler =
-    (err: MyError, _1, res, _2) => {
+const errorHandler =
+    (err, _1, res, _2) => {
       // 흐름상 에러가 검출되면 로그 표시 및 클라이언트에게 전달
       let responseInfo = err;
       if (err.sqlMessage) {
@@ -40,7 +39,7 @@ const errorHandler: express.ErrorRequestHandler =
       res.status(responseInfo.status || 500).send({ message: responseInfo.message || '' });
     };
 
-export default {
+module.exports =  {
   authMiddleware,
   adminMiddleware,
   errorHandler

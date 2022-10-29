@@ -1,11 +1,10 @@
-import express from 'express';
-import service_set from '../services'
+const service_set = require('../services');
 
 const {userSvc} = service_set;
 
-import {checkDataIsNotEmpty} from '../utils/myutils'
+const {checkDataIsNotEmpty} = require('../utils/myutils');
 
-async function login(req: express.Request, res: express.Response) {
+async function login(req, res) {
   const {email, password} = req.body;
   checkDataIsNotEmpty({email, password});
 
@@ -13,7 +12,7 @@ async function login(req: express.Request, res: express.Response) {
   res.status(200).send({message: 'login Success',token});
 }
 
-async function addUser(req: express.Request, res: express.Response) {
+async function addUser(req, res) {
 
   const { email, nickname, password, profile_image = 'none'} = req.body;
   checkDataIsNotEmpty({email, nickname, password});
@@ -23,16 +22,16 @@ async function addUser(req: express.Request, res: express.Response) {
   res.status(201).json({ message: "successfully created", token });
 }
 
-async function getAllUser(req: express.Request, res: express.Response) {
+async function getAllUser(req, res) {
   const allUser = await userSvc.getAllUser();
   res.status(200).send(allUser);
 }
-async function test(...[req, res] : Parameters<express.RequestHandler>) : Promise<any> {
+async function test(req, res) {
   console.log(`userInfo: ${JSON.stringify(req.userInfo)}`);
   res.send("TEST");
 }
 
-export default {
+module.exports = {
   test,
   login,
   addUser,

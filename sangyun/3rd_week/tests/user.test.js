@@ -1,8 +1,8 @@
 // tests/user.test.js
 
 // npm i --save-dev supertest
-import request from "supertest";
-import { createApp } from "../src/app";
+const  request = require("supertest");
+const  { createApp } = require("../src/app");
 import database from "../src/models/database"
 
 describe("Sign Up", () => {

@@ -1,10 +1,9 @@
-import express from 'express';
-import controllers from '../controllers';
-import middleware from '../middlewares/middleware';
-import {asyncWrap} from '../utils/myutils';
+const  express = require('express');
+const  controllers = require('../controllers');
+const  middleware = require('../middlewares/middleware');
+const  {asyncWrap} = require('../utils/myutils');
 
 const {userCtl} = controllers;
-
 
 const router = express.Router();
 
@@ -19,4 +18,4 @@ router.get('/user',  asyncWrap(middleware.authMiddleware),  asyncWrap(middleware
 // user login route
 router.post('/login', asyncWrap(userCtl.login));
 
-export default router;
+module.exports = router;

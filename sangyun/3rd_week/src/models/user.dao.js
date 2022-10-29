@@ -1,6 +1,6 @@
-import dataSource from './database';
+const  dataSource = require('./database');
 
-async function findUserByEmail(email : string) : Promise<UserInfo> {
+async function findUserByEmail(email){
   const [userInfo] = await dataSource.query(`
     SELECT
       id,
@@ -9,10 +9,10 @@ async function findUserByEmail(email : string) : Promise<UserInfo> {
     WHERE
     email = ?
   `, [email]);
-  return userInfo as UserInfo;
+  return userInfo;
 }
 
-async function findUserById(id : string) : Promise<UserInfo> {
+async function findUserById(id){
   const [userInfo] = await dataSource.query(`
     SELECT
       id,
@@ -23,7 +23,7 @@ async function findUserById(id : string) : Promise<UserInfo> {
     WHERE
     id = ?
   `, [id]);
-  return userInfo as UserInfo;
+  return userInfo;
 }
 
 async function getAllUser() {
@@ -37,8 +37,7 @@ async function getAllUser() {
   return allUsers;
 }
 
-async function addUser(userInfo : {email: string, password: string, nickname: string, profile_image: string}) {
-  const {email, nickname, password, profile_image} = userInfo;
+async function addUser({email, password, nickname, profile_image}) {
   return await dataSource.query(
     `INSERT INTO users(
                         email,
@@ -51,7 +50,7 @@ async function addUser(userInfo : {email: string, password: string, nickname: st
   )
 }
 
-export default {
+module.exports = {
   findUserByEmail,
   findUserById,
   getAllUser,

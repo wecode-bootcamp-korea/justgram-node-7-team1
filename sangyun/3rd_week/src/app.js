@@ -1,11 +1,11 @@
-import express from 'express';
-import dotenv from 'dotenv';
+const  express = require('express');
+const  dotenv = require('dotenv');
 dotenv.config();
-import morgan from 'morgan';
-import router  from "./routers";
-import cors from 'cors';
+const  morgan = require('morgan');
+const  router  = require("./routers");
+const  cors = require('cors');
 
-export const createApp = () => {
+const createApp = () => {
   const app = express();
   var corsOptions = {
     origin: '*',
@@ -14,8 +14,9 @@ export const createApp = () => {
   app.use(cors(corsOptions));
   app.use(express.json());
   app.use(morgan('combined'));
-  app.use(express.json());
   app.use(router);
 
   return app;
 };
+
+module.exports = {createApp};

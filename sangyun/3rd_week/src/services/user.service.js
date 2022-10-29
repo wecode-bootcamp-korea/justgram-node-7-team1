@@ -1,14 +1,14 @@
-import bcrypt from 'bcryptjs';
-import daoset from '../models';
-import jwt from 'jsonwebtoken';
+const  bcrypt = require('bcryptjs');
+const  daoset = require('../models');
+const  jwt = require('jsonwebtoken');
 
 const dao = daoset.userDao;
 
-async function makeHash(password : string) {
+async function makeHash(password ) {
   return await bcrypt.hash(password, 10)
 }
 
-async function login(email: string, password: string) {
+async function login(email, password) {
   // 매칭되는 유저가 있는 지 확인
   const userInfo = await dao.findUserByEmail(email);
   // 있으면 토큰 발행
@@ -23,9 +23,9 @@ async function login(email: string, password: string) {
   return token;
 }
 
-async function addUser(userInfo : {email: string, password: string, nickname: string, profile_image: string}) {
-  const {email} = userInfo;
+async function addUser({email, password, nickname, profile_image}) {
   // 1. 중복되는 유저 있는 지 확인
+  let userInfo =  {email, password, nickname, profile_image};
   const searchResult = await dao.findUserByEmail(email);
   if (searchResult) {
     throw {status: 400, message: '이미 해당 이메일이 등록되어있어요 '};
@@ -40,11 +40,11 @@ async function getAllUser() {
   return await dao.getAllUser();
 }
 
-async function findUserById(userId: string) {
+async function findUserById(userId) {
   return await dao.findUserById(userId);
 }
 
-export default {
+module.exports = {
   login,
   addUser,
   getAllUser,

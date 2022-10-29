@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+const  { DataSource } = require('typeorm');
 
 const dataSource = new DataSource({
   type: process.env.TYPEORM_CONNECTION,
@@ -19,4 +19,4 @@ if (bTestMode=="FALSE") {
   });
 }
 
-export default dataSource;
+module.exports = dataSource;
