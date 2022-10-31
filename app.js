@@ -1,0 +1,37 @@
+const express = require('express');
+const cors = require('cors');
+const routes = require('./routes');
+const morgan = require('morgan');
+const methodOverride = require('method-override');
+
+const createApp = () => {
+  const app = express();
+
+  app.use(express.json());
+  app.use(cors());
+  app.use(routes);
+  app.use(morgan('combined'));
+  app.use(methodOverride());
+
+  app.use((err, req, res, next) => {
+    const { status, message } = err
+    console.error(err);
+    res.status(status || 500).json({ message });
+  })
+  return app
+}
+
+module.exports = {createApp}
+
+
+
+
+
+
+
+
+
+
+
+
+
